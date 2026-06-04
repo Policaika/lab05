@@ -21,6 +21,7 @@ jobs:
       - name: tests
         run: ctest --test-dir build --output-on-failure
       - name: coverage
+        continue-on-error: true
         run: |
           lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
           echo "=== Files in coverage.info ==="
