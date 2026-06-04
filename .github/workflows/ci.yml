@@ -23,7 +23,9 @@ jobs:
       - name: coverage
         run: |
           lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
-          lcov --extract coverage.info '*/banking/Account.cpp' '*/banking/Transaction.cpp' --output-file coverage_result.info
+          echo "=== Files in coverage.info ==="
+          lcov --list coverage.info
+          lcov --extract coverage.info '*/lab05/banking/*' '*/banking/*' --output-file coverage_result.info --ignore-errors mismatch
           lcov --list coverage_result.info
       - name: push to coverals
         uses: coverallsapp/github-action@v2
