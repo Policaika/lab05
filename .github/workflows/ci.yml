@@ -22,7 +22,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure
       - name: coverage
         run: |
-          lcov --capture --directory build --output-file coverage.info
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
           lcov --extract coverage.info '*/banking/Account.cpp' '*/banking/Transaction.cpp' --output-file coverage_result.info
           lcov --list coverage_result.info
       - name: push to coverals
