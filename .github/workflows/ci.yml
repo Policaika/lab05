@@ -5,6 +5,10 @@ on: push
 jobs:
   coverage:
     runs-on: ubuntu-latest
+    steps:
+      - uses:
+        with:
+          submodules: recursive
 
     steps:
       - uses: actions/checkout@v4
