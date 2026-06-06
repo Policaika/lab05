@@ -22,11 +22,28 @@ jobs:
         run: ctest --test-dir build --output-on-failure
       - name: coverage
         run: |
-          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
-          echo "=== Files in coverage.info ==="
-          lcov --list coverage.info
-          lcov --extract coverage.info '*/lab05/banking/*' '*/banking/*' --output-file coverage_result.info --ignore-errors mismatch
-          lcov --list coverage_result.info
+            cd build
+
+            # Собираем покрытие через gcov
+            find . -name "*.gcno" -exec gcov -p {} \;
+
+            # Создаём отчёт
+            lcov --capture \
+                --directory . \
+                --output-file coverage.info \
+                --ignore-errors mismatch \
+                --no-external \
+                --rc lcov_branch_coverage=0  # ← Отключаем branch coverage
+
+            # Извлекаем наши файлы
+            lcov --extract coverage.info \
+                '*/lab05/banking/*' \
+                '*/banking/*' \
+                --output-file coverage_result.info \
+                --ignore-errors mismatch \
+                --rc lcov_branch_coverage=0
+
+            lcov --list coverage_result.info
       - name: push to coverals
         uses: coverallsapp/github-action@v2
         with:
