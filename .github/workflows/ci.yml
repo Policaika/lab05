@@ -22,10 +22,11 @@ jobs:
         run: ctest --test-dir build --output-on-failure
       - name: coverage
         run: |
-          lcov --capture --directory build --output-file coverage_raw.info --ignore-errors mismatch,unexecuted
-          lcov --extract coverage_raw.info '*/banking/Account.cpp' '*/banking/Transaction.cpp' --output-file coverage.info
-          lcov --remove coverage.info '/usr/*' --output-file coverage.info --ignore-errors unused
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
+          echo "=== Files in coverage.info ==="
           lcov --list coverage.info
+          lcov --extract coverage.info '*/lab05/banking/*' '*/banking/*' --output-file coverage_result.info --ignore-errors mismatch
+          lcov --list coverage_result.info
       - name: push to coverals
         uses: coverallsapp/github-action@v2
         with:
