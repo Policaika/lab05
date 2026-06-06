@@ -15,7 +15,7 @@ jobs:
       - name: confogure cmake
         env:
           CXX: g++
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DCOLLECT_COVERAGE=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DCODE_COVERAGE=ON
       - name: build
         run: cmake --build build
       - name: tests
