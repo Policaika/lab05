@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - name: install dependcies
         run: sudo apt-get update && sudo apt-get install -y lcov gcc g++
       - name: confogure cmake
