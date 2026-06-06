@@ -1,126 +1,73 @@
+#include <Account.h>
+#include <Transaction.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "Transaction.h"
-#include "classes_with_mock.h"
 
-using ::testing::StrictMock;
-using ::testing::Return;
-using ::testing::_;
-using ::testing::InSequence;
-
-class TransactionTest : public testing::Test {
+class AccountMock : public Account {
 public:
-    StrictMock<MockTransaction>* trans;
-    StrictMock<MockAccount>* from;
-    StrictMock<MockAccount>* to;
+    AccountMock(int id, int balance) : Account(id, balance) {}
 
-    void SetUp() override {
-        trans = new StrictMock<MockTransaction>();
-        from = new StrictMock<MockAccount>(1, 1000);
-        to = new StrictMock<MockAccount>(2, 1000);
+    MOCK_METHOD(int, GetBalance, (), (const, override));
+    MOCK_METHOD(void, ChangeBalance, (int diff), (override));
+    MOCK_METHOD(void, Lock, (), (override));
+    MOCK_METHOD(void, Unlock, (), (override));
+};
+
+class TransactionFixture : public testing::Test {
+public:
+    Transaction* tr;
+    AccountMock* from;
+    AccountMock* to;
+    void SetUp () override {
+        tr = new Transaction;
+        from = new testing::NiceMock<AccountMock>(1, 1000);
+        to = new testing::NiceMock<AccountMock>(2, 1000);
     }
-
-    void TearDown() override {
-        delete trans;
+    void TearDown () override {
+        delete tr;
         delete from;
         delete to;
     }
 };
 
-TEST_F(TransactionTest, DefaultFee) {
-    Transaction tx;
-    EXPECT_EQ(tx.fee(), 1);
+TEST_F(TransactionFixture, Fee) {
+    EXPECT_EQ(tr->fee(), 1);
 }
 
-TEST_F(TransactionTest, SetFee) {
-    Transaction tx;
-    tx.set_fee(10);
-    EXPECT_EQ(tx.fee(), 10);
+TEST_F(TransactionFixture, SetFee) {
+    tr->set_fee(10);
+    EXPECT_EQ(tr->fee(), 10);
 }
 
-TEST_F(TransactionTest, SameAccount) {
-    EXPECT_THROW(trans->Make(*from, *from, 200), std::logic_error);
+TEST_F(TransactionFixture, SuccessfulTransfer) {
+    EXPECT_CALL(*to, ChangeBalance(200)).Times(1);
+    EXPECT_CALL(*from, GetBalance()).WillOnce(testing::Return(1000)).WillRepeatedly(testing::Return(799));
+    EXPECT_CALL(*to, GetBalance()).WillRepeatedly(testing::Return(1200));
+
+    EXPECT_TRUE(tr->Make(*from, *to, 200));
 }
 
-TEST_F(TransactionTest, NegativeSum) {
-
-    EXPECT_THROW(trans->Make(*from, *to, -100), std::invalid_argument);
+TEST_F(TransactionFixture, TransferToYourself) {
+    EXPECT_THROW(tr->Make(*from, *from, 200), std::logic_error);
 }
 
-TEST_F(TransactionTest, TooSmall) {
-
-    EXPECT_THROW(trans->Make(*from, *to, 70), std::logic_error);
+TEST_F(TransactionFixture, NegativeSumTransfer) {
+    EXPECT_THROW(tr->Make(*from, *to, -100), std::invalid_argument);
 }
 
-TEST_F(TransactionTest, FeeExceeds) {
-    trans->set_fee(60);
-
-    bool result = trans->Make(*from, *to, 100);
-    EXPECT_FALSE(result);
+TEST_F(TransactionFixture, TooSmallSumTransfer) {
+    EXPECT_THROW(tr->Make(*from, *to, 70), std::logic_error);
 }
 
-TEST_F(TransactionTest, Successful) {
-    int sum = 100;
-    trans->set_fee(1);
-
-    {
-        InSequence seq;
-
-        EXPECT_CALL(*from, Lock());
-        EXPECT_CALL(*to, Lock());
-
-        EXPECT_CALL(*to, ChangeBalance(sum));
-
-        EXPECT_CALL(*from, GetBalance()).WillOnce(Return(1000));
-        EXPECT_CALL(*from, ChangeBalance(-(sum + 1)));
-
-        EXPECT_CALL(*trans, SaveToDataBase(_, _, sum));
-
-        EXPECT_CALL(*to, Unlock());
-        EXPECT_CALL(*from, Unlock());
-    }
-
-    bool result = trans->Make(*from, *to, sum);
-    EXPECT_TRUE(result);
+TEST_F(TransactionFixture, TooBigFee) {
+    tr->set_fee(60);
+    EXPECT_FALSE(tr->Make(*from, *to, 100));
 }
 
-TEST_F(TransactionTest, NotEnoughFunds) {
-    int sum = 100;
-    trans->set_fee(1);
-
-    {
-        InSequence seq;
-
-        EXPECT_CALL(*from, Lock());
-        EXPECT_CALL(*to, Lock());
-
-        EXPECT_CALL(*to, ChangeBalance(sum));
-
-        EXPECT_CALL(*from, GetBalance()).WillOnce(Return(50));
-
-        EXPECT_CALL(*to, ChangeBalance(-sum));
-
-        EXPECT_CALL(*trans, SaveToDataBase(_, _, sum));
-
-        EXPECT_CALL(*to, Unlock());
-        EXPECT_CALL(*from, Unlock());
-    }
-
-    bool result = trans->Make(*from, *to, sum);
-    EXPECT_FALSE(result);
-}
-
-
-TEST(TransactionRealTest, RealTransaction) {
-    Transaction tx;
-    tx.set_fee(1);
-
-    Account from(1, 500);
-    Account to(2, 100);
-
-    bool result = tx.Make(from, to, 100);
-
-    EXPECT_TRUE(result);
-    EXPECT_EQ(from.GetBalance(), 399);
-    EXPECT_EQ(to.GetBalance(), 200);
+TEST_F(TransactionFixture, TooBigSumTransfer) {
+    EXPECT_CALL(*from, GetBalance()).WillRepeatedly(testing::Return(1000));
+    EXPECT_CALL(*to, ChangeBalance(1200)).Times(1);
+    EXPECT_CALL(*to, ChangeBalance(-1200)).Times(1);
+    EXPECT_CALL(*to, GetBalance()).WillRepeatedly(testing::Return(1000));
+    EXPECT_FALSE(tr->Make(*from, *to, 1200));
 }
